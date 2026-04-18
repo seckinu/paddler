@@ -1,0 +1,30 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"title": "Paddler Group Configuration",
+	"description": "A schema defining custom character groups using single uppercase keys.",
+	"type": "object",
+	"required": ["groups"],
+	"properties": {
+		"$schema": {
+			"type": "string",
+			"description": "JSON Schema reference"
+		},
+		"groups": {
+			"type": "object",
+			"description": "Single uppercase character group names and their characters.",
+			"propertyNames": {
+				"pattern": "^[A-Z]$"
+			},
+			"additionalProperties": {
+				"type": "array",
+				"description": "An array of single-character strings representing the group members.",
+				"items": {
+					"type": "string",
+					"minLength": 1,
+					"maxLength": 1
+				}
+			}
+		}
+	},
+	"additionalProperties": false
+}
