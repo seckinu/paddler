@@ -23,6 +23,9 @@ struct Args {
 
     #[arg(short, long)]
     file: Option<PathBuf>,
+
+    #[arg(long)]
+    count: Option<i16>,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -35,6 +38,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let matcher = Matcher::new(&pattern, Some(&config));
 
+    let mut matched_count: i16 = 0;
     if let Some(file_path) = args.file {
         let file = File::open(file_path)?;
         let reader = BufReader::new(file);
@@ -48,6 +52,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             if matcher.matches(trimmed_word) {
                 println!("{}", trimmed_word);
+                matched_count += 1;
+                if let Some(count) = args.count
+                    && matched_count == count
+                {
+                    break;
+                }
             }
         }
     } else if args.input.len() > 0 {
@@ -59,6 +69,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             if matcher.matches(trimmed_word) {
                 println!("{}", trimmed_word);
+                matched_count += 1;
+                if let Some(count) = args.count
+                    && matched_count == count
+                {
+                    break;
+                }
             }
         }
     } else {
