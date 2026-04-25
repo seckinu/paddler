@@ -6,6 +6,8 @@ Paddler is **not** a pattern extractor, nor is it a replacement for, update over
 
 Paddler returns matching words that match the given pattern, given a list of words or a file, separating words by newline.
 
+**License:** This project is licensed under the LGPL-3.0-or-later. See the [[LICENSE]] and [[COPYING.LESSER]] files for details.
+
 ## Syntax
 
 Paddler has a couple simple tokens that can be found in [engine.rs](./src/engine.rs#L13):
