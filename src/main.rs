@@ -1,4 +1,5 @@
 use clap::Parser;
+use paddler::lang::Language;
 use paddler::{Config, Matcher, Pattern};
 use std::fs::File;
 use std::io::{BufRead, BufReader};
@@ -26,6 +27,9 @@ struct Args {
 
     #[arg(long)]
     count: Option<i16>,
+
+    #[arg(value_enum, short, long)]
+    language: Language,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -36,7 +40,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let pattern =
         Pattern::new(&args.pattern, Some(&config)).map_err(|e| format!("Pattern Error: {}", e))?;
 
-    let matcher = Matcher::new(&pattern, Some(&config));
+    let matcher = Matcher::new(&pattern, Some(&config), args.language);
 
     let mut matched_count: i16 = 0;
     if let Some(file_path) = args.file {
@@ -45,12 +49,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         for line in reader.lines() {
             let word = line?;
-            let trimmed_word = word.trim();
+            let trimmed_word = word.trim().to_lowercase();
             if trimmed_word.is_empty() {
                 continue;
             }
 
-            if matcher.matches(trimmed_word) {
+            if matcher.matches(trimmed_word.as_str()) {
                 println!("{}", trimmed_word);
                 matched_count += 1;
                 if let Some(count) = args.count

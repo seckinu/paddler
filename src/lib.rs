@@ -1,7 +1,7 @@
 pub mod config;
 pub mod engine;
 pub mod error;
-pub mod utils;
+pub mod lang;
 
 pub use config::Config;
 pub use engine::{Matcher, Pattern};

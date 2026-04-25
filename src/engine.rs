@@ -1,15 +1,15 @@
 use crate::config::Config;
 use crate::error::EngineError;
-use crate::utils::syllabize;
+use crate::lang;
 
-#[derive(PartialEq, Eq, Clone, Copy)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum Boundary {
     WordBegin,
     WordEnd,
     Syllable,
 }
 
-#[derive(PartialEq, Eq, Clone, Copy)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum Token {
     Group(char),
     Boundary(Boundary),
@@ -27,7 +27,6 @@ impl Pattern {
     pub fn new(pattern: &str, config: Option<&Config>) -> Result<Self, EngineError> {
         let mut tokens = Self::parse(pattern)?;
 
-        // FIXED: Use explicit checks for the first and last elements
         let anchored_start = matches!(tokens.first(), Some(Token::Boundary(Boundary::WordBegin)));
         let anchored_end = matches!(tokens.last(), Some(Token::Boundary(Boundary::WordEnd)));
 
@@ -38,7 +37,6 @@ impl Pattern {
             tokens.pop();
         }
 
-        // FIXED: Validate that NO other boundaries exist in the middle
         for token in &tokens {
             match token {
                 Token::Boundary(Boundary::WordBegin) => {
@@ -85,86 +83,112 @@ impl Pattern {
 pub struct Matcher<'a> {
     pattern: &'a Pattern,
     config: Option<&'a Config>,
+    syllabizer: Option<fn(word: &str) -> Vec<String>>,
+    _lang: lang::Language,
 }
 
 impl<'a> Matcher<'a> {
-    pub fn new(pattern: &'a Pattern, config: Option<&'a Config>) -> Self {
-        Self { pattern, config }
+    pub fn new(pattern: &'a Pattern, config: Option<&'a Config>, lang: lang::Language) -> Self {
+        Self {
+            pattern,
+            config,
+            syllabizer: lang.get_syllabizer(),
+            _lang: lang,
+        }
     }
 
     pub fn matches(&self, input: &str) -> bool {
-        let syllables = match syllabize(input) {
-            Some(s) => s,
-            None => return false,
-        };
+        let mut chars = if let Some(syllabizer) = self.syllabizer {
+            let syllables: Vec<String> = syllabizer(input);
+            let mut tokens = Vec::new();
 
-        let mut chars: Vec<char> = Vec::with_capacity(32);
-        let mut syllable_boundary_indices: Vec<usize> = Vec::with_capacity(10);
+            for (i, syllable) in syllables.iter().enumerate() {
+                for c in syllable.chars() {
+                    tokens.push(Token::Char(c));
+                }
 
-        for (i, syllable) in syllables.iter().enumerate() {
-            if i > 0 {
-                syllable_boundary_indices.push(chars.len());
-            }
-            for ch in syllable.chars() {
-                chars.push(ch);
-            }
-        }
-
-        let word_len = chars.len();
-        let start_range = if self.pattern.anchored_start {
-            0..=0
-        } else {
-            0..=word_len
-        };
-
-        'outer: for start in start_range {
-            let mut char_pos = start;
-            let mut tok_pos = 0;
-
-            while tok_pos < self.pattern.tokens.len() {
-                let token = &self.pattern.tokens[tok_pos];
-
-                match token {
-                    Token::Boundary(Boundary::Syllable) => {
-                        if !syllable_boundary_indices.binary_search(&char_pos).is_ok() {
-                            continue 'outer;
-                        }
-                        tok_pos += 1;
-                    }
-                    Token::Group(g) => {
-                        if char_pos >= word_len {
-                            continue 'outer;
-                        }
-
-                        let cfg = self
-                            .config
-                            .expect("Pattern contains groups but no config provided");
-                        let ch = chars[char_pos];
-
-                        if !cfg.groups.get(g).map_or(false, |set| set.contains(&ch)) {
-                            continue 'outer;
-                        }
-                        char_pos += 1;
-                        tok_pos += 1;
-                    }
-                    Token::Char(c) => {
-                        if char_pos >= word_len || chars[char_pos] != *c {
-                            continue 'outer;
-                        }
-                        char_pos += 1;
-                        tok_pos += 1;
-                    }
-                    _ => continue 'outer,
+                if i < syllables.len() - 1 {
+                    tokens.push(Token::Boundary(Boundary::Syllable));
                 }
             }
+            tokens
+        } else {
+            input.chars().map(|c| Token::Char(c)).collect()
+        };
 
-            if self.pattern.anchored_end && char_pos != word_len {
-                continue 'outer;
+        let mut chars_iter = chars.iter();
+        let mut tokens_iter = self.pattern.tokens.iter();
+
+        let (mut token, mut char) = (tokens_iter.next(), chars_iter.next());
+        loop {
+            match (char, token) {
+                (None, None) => return true,
+                (None, Some(_)) => return false,
+                // input remains, pattern finished
+                (Some(_), None) => {
+                    if self.pattern.anchored_end {
+                        tokens_iter = self.pattern.tokens.iter();
+                        token = tokens_iter.next();
+                        chars.remove(0);
+                        chars_iter = chars.iter();
+                        char = chars_iter.next();
+                    } else {
+                        return true;
+                    }
+                }
+                (
+                    Some(Token::Boundary(Boundary::Syllable)),
+                    Some(Token::Group(_)) | Some(Token::Char(_)),
+                ) => char = chars_iter.next(),
+                (Some(Token::Char(_)), Some(Token::Boundary(Boundary::Syllable))) => {
+                    if self.pattern.anchored_start {
+                        return false;
+                    }
+                    tokens_iter = self.pattern.tokens.iter();
+                    token = tokens_iter.next();
+                    chars.remove(0);
+                    chars_iter = chars.iter();
+                    char = chars_iter.next();
+                }
+                (Some(Token::Char(ch)), Some(Token::Char(t_ch))) if ch != t_ch => {
+                    if self.pattern.anchored_start {
+                        return false;
+                    }
+                    tokens_iter = self.pattern.tokens.iter();
+                    token = tokens_iter.next();
+                    chars.remove(0);
+                    chars_iter = chars.iter();
+                    char = chars_iter.next();
+                }
+                (Some(Token::Char(ch)), Some(Token::Group(group))) => {
+                    let Some(config) = self.config else {
+                        return false;
+                    };
+
+                    let contains = config
+                        .groups
+                        .get(&group)
+                        .map_or(false, |set| set.contains(ch));
+
+                    if !contains {
+                        if self.pattern.anchored_start {
+                            return false;
+                        }
+                        tokens_iter = self.pattern.tokens.iter();
+                        token = tokens_iter.next();
+                        chars.remove(0);
+                        chars_iter = chars.iter();
+                        char = chars_iter.next();
+                    } else {
+                        char = chars_iter.next();
+                        token = tokens_iter.next();
+                    }
+                }
+                (Some(_), Some(_)) => {
+                    char = chars_iter.next();
+                    token = tokens_iter.next();
+                }
             }
-
-            return true;
         }
-
-        false
     }
 }
