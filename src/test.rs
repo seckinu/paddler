@@ -1,140 +1,47 @@
 #[cfg(test)]
 mod tests {
-    use crate::config::Config;
-    use crate::engine::{Matcher, Pattern};
-    use std::collections::{HashMap, HashSet};
+    use smol_str::ToSmolStr;
 
-    fn setup_config() -> Config {
-        let mut groups = HashMap::new();
-        let mut consonants = HashSet::new();
-        consonants.insert('m');
-        consonants.insert('k');
-        consonants.insert('s');
-        consonants.insert('t');
-        consonants.insert('p');
+    use crate::pattern::Pattern;
+    use crate::segment::Segment;
+    use crate::word::{Word, parse_words_from_tsv};
 
-        let mut vowels = HashSet::new();
-        vowels.insert('a');
-        vowels.insert('i');
-        vowels.insert('e');
+    #[test]
+    fn test_parse_pattern() {
+        let pattern_str = "[-voice]#";
+        let pattern = Pattern::from_str(pattern_str).unwrap();
 
-        groups.insert('C', consonants);
-        groups.insert('V', vowels);
-        Config { groups }
+        let word: Word = Word::new("'bout".to_smolstr(), "ˈbaʊt".to_smolstr());
+
+        assert!(pattern.matches(&word));
     }
 
     #[test]
-    fn test_new_match() {
-        let config = setup_config();
-        let pattern = Pattern::new("Casa", Some(&config)).unwrap();
-        let matcher = Matcher::new(&pattern, Some(&config), crate::lang::Language::TR);
+    fn test() {
+        let word = "cat";
 
-        let result = matcher.matches("masa");
-        println!("{result}");
-        assert!(matcher.matches("masa"));
+        let word_segments = Segment::parse_all(word).unwrap();
+
+        dbg!(&word_segments);
     }
 
     #[test]
-    fn test_basic_cvcv_match() {
-        let config = setup_config();
-        let pattern = Pattern::new("CVCV", Some(&config)).unwrap();
-        let matcher = Matcher::new(&pattern, Some(&config), crate::lang::Language::TR);
+    fn test_different_dict() {
+        let words = parse_words_from_tsv("cmudict-ipa.tsv".into()).unwrap();
 
-        assert!(matcher.matches("masa"));
-        assert!(matcher.matches("kasa"));
-        assert!(matcher.matches("kita")); // part of kitap
-    }
+        println!("Parsed {} words", words.len());
 
-    #[test]
-    fn test_anchored_matches() {
-        let config = setup_config();
+        assert!(words.len() > 0);
 
-        // Test Start Anchor
-        let pattern_start = Pattern::new("^CVCV", Some(&config)).unwrap();
-        let matcher_start = Matcher::new(&pattern_start, Some(&config), crate::lang::Language::TR);
-        assert!(matcher_start.matches("masa"));
-        assert!(!matcher_start.matches("amasa"));
+        let pattern_str = "[-voice]#";
+        let pattern = Pattern::new(pattern_str).unwrap();
 
-        // Test End Anchor
-        let pattern_end = Pattern::new("CVCV$", Some(&config)).unwrap();
-        let matcher_end = Matcher::new(&pattern_end, Some(&config), crate::lang::Language::TR);
-        assert!(matcher_end.matches("masa"));
-        assert!(!matcher_end.matches("masas"));
-    }
+        let matches: Vec<&Word> = words[10000..11000]
+            .iter()
+            .filter(|word| pattern.matches(word))
+            .collect();
 
-    #[test]
-    fn test_syllable_boundary_optionality() {
-        let config = setup_config();
-        let pattern = Pattern::new("C.VCV", Some(&config)).unwrap();
-        let matcher = Matcher::new(&pattern, Some(&config), crate::lang::Language::TR);
-
-        assert!(!matcher.matches("masa"));
-        assert!(!matcher.matches("kitaplık"));
-    }
-
-    #[test]
-    fn test_literal_char_matching() {
-        let config = setup_config();
-        let pattern = Pattern::new("kita", Some(&config)).unwrap();
-        let matcher = Matcher::new(&pattern, Some(&config), crate::lang::Language::TR);
-
-        assert!(matcher.matches("kita"));
-        assert!(matcher.matches("kitap"));
-        assert!(!matcher.matches("kasa"));
-    }
-
-    #[test]
-    fn test_no_config_plain_text() {
-        // Should succeed for literal chars
-        let pattern = Pattern::new("abc", None).unwrap();
-        let matcher = Matcher::new(&pattern, None, crate::lang::Language::TR);
-        assert!(matcher.matches("abc"));
-        assert!(!matcher.matches("abd"));
-
-        // Should fail for Group tokens if no config is provided
-        let pattern_group = Pattern::new("CVCV", None);
-        assert!(pattern_group.is_err());
-    }
-
-    #[test]
-    fn test_invalid_patterns() {
-        let config = setup_config();
-
-        // Misplaced anchors
-        assert!(Pattern::new("C^V", Some(&config)).is_err());
-        assert!(Pattern::new("C$V", Some(&config)).is_err());
-
-        // Unknown groups
-        assert!(Pattern::new("XCV", Some(&config)).is_err());
-
-        // Invalid characters
-        assert!(Pattern::new("CVCV!", Some(&config)).is_err());
-    }
-
-    #[test]
-    fn test_complex_sequence() {
-        let config = setup_config();
-        // kit.a (CVC.V)
-        let pattern = Pattern::new("CVCVp.", Some(&config)).unwrap();
-        let matcher = Matcher::new(&pattern, Some(&config), crate::lang::Language::TR);
-
-        assert!(matcher.matches("kitaplık"));
-    }
-}
-
-#[cfg(test)]
-mod syllabize_tests {
-    use crate::lang::tr::syllabize;
-
-    #[test]
-    fn syllabize_test() {
-        assert_eq!(syllabize("masa"), vec!["ma".to_string(), "sa".to_string()],);
-        assert_eq!(syllabize("ağa"), vec!["a".to_string(), "ğa".to_string()],);
-        assert_eq!(syllabize("adam"), vec!["a".to_string(), "dam".to_string()],);
-        assert_eq!(syllabize("saat"), vec!["sa".to_string(), "at".to_string()],);
-        assert_eq!(
-            syllabize("traktör"),
-            vec!["trak".to_string(), "tör".to_string()],
-        );
+        println!("Found {} matches", matches.len());
+        dbg!(matches);
     }
 }
