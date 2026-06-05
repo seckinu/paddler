@@ -1,11 +1,8 @@
-pub mod config;
-pub mod engine;
-pub mod error;
-pub mod lang;
-
-pub use config::Config;
-pub use engine::{Matcher, Pattern};
-pub use error::EngineError;
+pub mod ipa;
+pub mod modifier;
+pub mod pattern;
+pub mod segment;
+pub mod word;
 
 #[cfg(test)]
 mod test;

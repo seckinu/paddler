@@ -1,76 +1,91 @@
 # 🦆 Paddler
 
-Paddler is a simple, extensible, word-level pattern checker.
+Paddler is a simple, extensible, word-level phonetic pattern checker.
 
 Paddler is **not** a pattern extractor, nor is it a replacement for, update over, or an alternative to regex.
 
-Paddler returns matching words that match the given pattern, given a list of words or a file, separating words by newline.
+Paddler returns words that match the given phonetic pattern, given a dictionary file, separating words by newline.
 
 **License:** This project is licensed under the LGPL-3.0-or-later. See the [[LICENSE]] and [[COPYING.LESSER]] files for details.
 
+## Dictionary
+
+A dictionary file must follow this structure:
+
+```tsv
+orthography  phonetic_transcription, phonetic_transcription
+```
+
 ## Syntax
 
-Paddler has a couple simple tokens that can be found in [engine.rs](./src/engine.rs#L13):
+Paddler has a couple simple tokens that can be found in [segment.rs](./src/segment.rs#L26):
 
 ```rust
-pub enum Token {
-    Group(char),
-    Boundary(Boundary),
-    Char(char),
+pub enum Segment {
+    IPA(IPA),
+    FeatureSet(FeatureSet),
+    Any,
+    Stress,
+    SecondaryStress,
+    Syllable,
 }
 ```
 
 ### Tokens
 
-- **Boundaries:**
-  - `^` : Word start
-  - `$` : Word ending
-  - `.` : Syllable boundary
-- **Groups:** An uppercase character (e.g., `A`, `B`).
-- **Chars:** Any lowercase alphabetical character (e.g., `a`, `b`).
+- IPA:
+  - An IPA entry, that must exist in [[ipa_base.csv]]
+    - An IPA token may be modified with Modifiers defined in [[./src/modifier.rs]], these will update the featureset of the given IPA.
+- FeatureSet
+  - A list of [Features](./src/ipa.rs#L11), put inside square brackets with signs (i.e. [consonant -voice, +sonorant])
+- Any
+  - The '_' character that matches any other segment
+- Stress
+  - IPA representation(ˈ) or for simpler use, a single tick (')
+- SecondaryStress
+  - The 'ˌ' character
+- Syllable
+  - The dot character(.) that represents a syllable boundary
 
 ## Usage
 
 ```bash
-paddler [OPTIONS] --pattern <PATTERN> <--file <FILE>|INPUT>
+Usage: paddler [OPTIONS] <PATTERN>
+
+Arguments:
+  <PATTERN>  
+
+Options:
+  -d, --dict <DICT>  [default: en_US.txt]
+  -h, --help         Print help
+  -V, --version      Print version
 ```
 
 ### Examples
 
 ```bash
-$ paddler --pattern elmV elma
-elma
+$ paddler "#[cons][-cons]ŋk#"     
+banc, ˈbæŋk
+bank, ˈbæŋk
+banke, ˈbæŋk
+banque, ˈbæŋk
+behnke, ˈbɛŋk
+benke, ˈbɛŋk
 ```
 
-Paddler can process more than one word at a time:
+Or with a custom dictionary:
 
 ```bash
-$ paddler --pattern elmV elma elmas adak
-elma
-elmas
+$ paddler "#[cons][-cons]ŋk# --dict=cmudict-ipa.tsv"     
+BANC, 'bæŋk
+BANK, 'bæŋk
+BANKE, 'bæŋk
+BANQUE, 'bæŋk
+BEHNKE, 'bɛŋk
+BENKE, 'bɛŋk
 ```
 
-Paddler can be used to traverse over a file of words, separated via newlines:
+## Acknowledgements
 
-```bash
-$ paddler --pattern ^CV.CV$ --file words.txt
-masa
-kasa
-...
-```
-
-This will output all the words that match to the given pattern from words.txt.
-
-## Groups
-
-Paddler has a concept of `groups`.
-
-A group is a set of characters, for example a group named `X` could be equal to: `["a", "b", "c"]`. Now wherever you use `X` in your pattern it will match any of the given characters `a, b, c`.
-
-Groups are defined by *uppercase single chars*. By default paddler comes shipped with two groups defined: `C` for consonants, `V` for vowels, of Turkish.
-
-With the `-c, --config` flag you can choose your own config file.
-
-## Config
-
-A default [config file](config.json) is included in the repo along with the [config schema](config.schema.json).
+- [PanPhon](https://github.com/dmort27/panphon/), for [[ipa_base.csv]] and [diacritics / modifiers](./src/modifier.rs).
+- [ipa-dict](https://github.com/open-dict-data/ipa-dict/), for providing ipa transcriptions of words in various languages, which have been utilized for testing, and `en_US.txt` is included by default.
