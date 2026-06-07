@@ -1,3 +1,4 @@
+pub mod feature;
 pub mod ipa;
 pub mod modifier;
 pub mod pattern;

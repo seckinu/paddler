@@ -1,12 +1,12 @@
-use std::iter::Peekable;
-use std::str::FromStr;
+use std::{iter::Peekable, str::FromStr};
 
 use smol_str::ToSmolStr;
 use thiserror::Error;
 
 use crate::{
-    ipa::{FeatureSet, IPA, IPAInventory},
-    modifier::{Modifier, ModifierPosition},
+    feature::FeatureSet,
+    ipa::{IPA, IPAInventory},
+    modifier::{Modifier, ModifierPosition, ModifierSet},
 };
 
 #[derive(Debug, PartialEq, Eq, Error)]
@@ -30,6 +30,19 @@ pub enum Segment {
     Stress,
     SecondaryStress,
     Syllable,
+}
+
+impl Segment {
+    pub fn to_string(&self) -> Option<String> {
+        match self {
+            Segment::IPA(ipa) => Some(ipa.to_string()),
+            Segment::FeatureSet(_) => None,
+            Segment::Any => None,
+            Segment::Stress => Some("'".to_string()),
+            Segment::SecondaryStress => Some(",".to_string()),
+            Segment::Syllable => Some(".".to_string()),
+        }
+    }
 }
 
 impl Segment {
@@ -59,6 +72,9 @@ impl Segment {
             }
             (Segment::Stress, Segment::Stress) => SegmentMatchResult::Match,
             (Segment::Syllable, Segment::Syllable) => SegmentMatchResult::Match,
+            (Segment::Syllable, Segment::Stress | Segment::SecondaryStress) => {
+                SegmentMatchResult::Match
+            }
             _ => {
                 if other.is_skippable() {
                     SegmentMatchResult::Skip
@@ -117,9 +133,10 @@ impl Segment {
 
             Ok(Some(Segment::FeatureSet(features)))
         } else {
-            let mut modifiers: Vec<Modifier> = Default::default();
+            let mut modifiers: ModifierSet = Default::default();
             let mut possible_ipa_symbol = String::with_capacity(8);
             let mut last_exact_match: Option<&IPA> = None;
+            let mut last_modifier_pos: Option<ModifierPosition> = None;
 
             while let Some(c) = iter.peek() {
                 if ['ˈ', '\'', '.', 'ˌ', '_'].contains(c) {
@@ -148,21 +165,18 @@ impl Segment {
                     possible_ipa_symbol.pop();
 
                     let modifier_position = modifier.position();
-                    let Some(last_modifier) = modifiers.last() else {
-                        iter.next();
-                        modifiers.push(modifier);
+
+                    let Some(ref last_pos) = last_modifier_pos else {
+                        modifiers.enable(modifier);
+                        last_modifier_pos = Some(modifier_position);
                         continue;
                     };
 
-                    match (modifier_position, last_modifier.position()) {
-                        (ModifierPosition::Pre, ModifierPosition::Pre) => modifiers.push(modifier),
-                        (ModifierPosition::Post, ModifierPosition::Post) => {
-                            modifiers.push(modifier)
-                        }
-                        (ModifierPosition::Pre, ModifierPosition::Post) => modifiers.push(modifier),
+                    match (modifier_position, last_pos) {
                         (ModifierPosition::Post, ModifierPosition::Pre) => {
                             break;
                         }
+                        _ => modifiers.enable(modifier),
                     }
 
                     iter.next();
@@ -173,11 +187,12 @@ impl Segment {
                 }
             }
 
-            let mut ipa: IPA = last_exact_match
-                .ok_or_else(|| SegmentError::NoMatchingIPASymbol(possible_ipa_symbol.clone()))?
-                .clone();
-
-            ipa.apply_modifiers(modifiers);
+            let ipa: IPA = IPA::with_modifiers(
+                last_exact_match.ok_or_else(|| {
+                    SegmentError::NoMatchingIPASymbol(possible_ipa_symbol.clone())
+                })?,
+                modifiers,
+            );
 
             Ok(Some(Segment::IPA(ipa)))
         }

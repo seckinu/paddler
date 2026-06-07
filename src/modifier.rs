@@ -1,4 +1,7 @@
-use crate::ipa::{Feature, FeatureState};
+use std::ops::{Deref, Index, IndexMut};
+use strum_macros::FromRepr;
+
+use crate::feature::{Feature, FeatureState};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ModifierPosition {
@@ -6,7 +9,7 @@ pub enum ModifierPosition {
     Post,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, FromRepr)]
 pub enum Modifier {
     Ejective,
     Voiceless,
@@ -311,5 +314,82 @@ impl Modifier {
             Modifier::Long => &[&[(Feature::Long, FeatureState::Negative)]],
             Modifier::ExtraShort => &[&[(Feature::Syllabic, FeatureState::Positive)]],
         }
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Default)]
+pub struct ModifierSet([bool; 31]);
+
+impl Deref for ModifierSet {
+    type Target = [bool; 31];
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl IndexMut<Modifier> for ModifierSet {
+    fn index_mut(&mut self, index: Modifier) -> &mut Self::Output {
+        &mut self.0[index as usize]
+    }
+}
+
+impl Index<Modifier> for ModifierSet {
+    type Output = bool;
+
+    fn index(&self, index: Modifier) -> &Self::Output {
+        &self.0[index as usize]
+    }
+}
+
+impl FromIterator<Modifier> for ModifierSet {
+    fn from_iter<T: IntoIterator<Item = Modifier>>(iter: T) -> Self {
+        let mut default = ModifierSet::default();
+        for item in iter {
+            default[item] = true;
+        }
+        default
+    }
+}
+
+impl ModifierSet {
+    pub fn modifiers(&self) -> Vec<Modifier> {
+        self.iter()
+            .enumerate()
+            .filter_map(|(idx, bool)| {
+                if !bool {
+                    return None;
+                };
+
+                Modifier::from_repr(idx)
+            })
+            .collect::<Vec<Modifier>>()
+    }
+
+    pub fn is_populated(&self) -> bool {
+        self.iter().any(|bool| *bool)
+    }
+
+    pub fn enable(&mut self, modifier: Modifier) {
+        self[modifier] = true;
+    }
+
+    pub fn disable(&mut self, modifier: Modifier) {
+        self[modifier] = false;
+    }
+
+    pub fn to_string(&self, symbol: &'static str) -> String {
+        let mut end_string = String::from(symbol);
+
+        for modifier in self.modifiers() {
+            let position = modifier.position();
+            let modifier_str = modifier.marker();
+            match position {
+                ModifierPosition::Pre => end_string.insert_str(0, modifier_str),
+                ModifierPosition::Post => end_string.push_str(modifier_str),
+            }
+        }
+
+        end_string
     }
 }
