@@ -37,7 +37,11 @@ pub fn parse_words_from_tsv(file_path: PathBuf) -> Result<Vec<Word>, std::io::Er
 
         // underlying not yet implemented
         if let (Some(orthography), Some(surface)) = (parts.next(), parts.next()) {
-            for surface in surface.split(',').map(|s| s.trim()) {
+            for surface in surface.split(',').map(|s| {
+                s.trim()
+                    .trim_end_matches(['/', ']'])
+                    .trim_start_matches(['/', '['])
+            }) {
                 words.push(Word::new(orthography.to_smolstr(), surface.to_smolstr()));
             }
         }
