@@ -83,9 +83,11 @@ impl Feature {
 
             // glottis
             s if s.starts_with("spread_glottis") => Some(Feature::SpreadGlottis),
+            s if s.starts_with("spreadglottis") => Some(Feature::SpreadGlottis),
             s if s.starts_with("sg") => Some(Feature::SpreadGlottis),
 
             s if s.starts_with("constricted_glottis") => Some(Feature::ConstrictedGlottis),
+            s if s.starts_with("constrictedglottis") => Some(Feature::ConstrictedGlottis),
             s if s.starts_with("cg") => Some(Feature::ConstrictedGlottis),
 
             s if s.starts_with("ant") => Some(Feature::Anterior),
