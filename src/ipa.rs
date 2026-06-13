@@ -108,13 +108,18 @@ impl IPAInventory {
         }
         IPAInventory(ipa_list.into())
     }
-}
 
-impl IPAInventory {
     pub fn find_exact_match(&self, value: &str) -> Option<&IPA> {
         IPA_SYMBOLS
             .get()
             .and_then(|symbols| symbols.get(value))
             .map(|v| *v)
+    }
+
+    pub fn find_possible_matches(&self, value: &str) -> Vec<&IPA> {
+        self.0
+            .iter()
+            .filter(|ipa| ipa.symbol.starts_with(value))
+            .collect()
     }
 }

@@ -1,12 +1,11 @@
 use std::{iter::Peekable, str::FromStr};
 
-use smol_str::ToSmolStr;
 use thiserror::Error;
 
 use crate::{
     feature::FeatureSet,
     ipa::{IPA, IPAInventory},
-    modifier::{Modifier, ModifierPosition, ModifierSet},
+    modifier::{Modifier, ModifierSet},
 };
 
 #[derive(Debug, PartialEq, Eq, Error)]
@@ -134,61 +133,117 @@ impl Segment {
             Ok(Some(Segment::FeatureSet(features)))
         } else {
             let mut modifiers: ModifierSet = Default::default();
-            let mut possible_ipa_symbol = String::with_capacity(8);
-            let mut last_exact_match: Option<&IPA> = None;
-            let mut last_modifier_pos: Option<ModifierPosition> = None;
+            let mut possible_ipa_symbol = String::with_capacity(4);
+            let mut matches: Vec<&IPA> = Vec::new();
+
+            let mut base_ipa: Option<&IPA> = None;
 
             while let Some(c) = iter.peek() {
                 if ['ˈ', '\'', '.', 'ˌ', '_'].contains(c) {
                     break;
                 }
 
-                possible_ipa_symbol.push(*c);
-
-                // 3 cases:
-                // - the character is a modifier (e.g. ejective, voiceless, etc.)
-                // - the character is part of the previous IPA symbol (e.g. 'ʃ' for 'tʃ')
-                // - the character is a new IPA symbol (e.g. 'k' after 'k')
-
-                // part of the previous IPA
-                if let Some(m) = ipa_inventory.find_exact_match(&possible_ipa_symbol) {
-                    last_exact_match = Some(m);
-                    iter.next();
-                    continue;
-                } else if ipa_inventory.find_exact_match(&c.to_smolstr()).is_some() {
-                    // a new IPA
-                    break;
-                };
-
-                // a modifier
-                if let Some(modifier) = Modifier::from_str(&c.to_string()) {
-                    possible_ipa_symbol.pop();
-
-                    let modifier_position = modifier.position();
-
-                    let Some(ref last_pos) = last_modifier_pos else {
-                        modifiers.enable(modifier);
-                        last_modifier_pos = Some(modifier_position);
+                if base_ipa.is_none() {
+                    if *c == '\u{361}' {
+                        iter.next();
                         continue;
+                    }
+
+                    possible_ipa_symbol.push(*c);
+                    if matches.len() == 0 {
+                        matches = ipa_inventory.find_possible_matches(&possible_ipa_symbol)
+                    } else {
+                        matches.retain(|ipa| ipa.symbol.starts_with(&possible_ipa_symbol))
                     };
 
-                    match (modifier_position, last_pos) {
-                        (ModifierPosition::Post, ModifierPosition::Pre) => {
-                            break;
+                    match matches.len() {
+                        // no matches
+                        0 => {
+                            // beginning of symbol, no matches -> 0 from start
+                            // continuation of a symbol, more than 1 matches to 0
+
+                            if possible_ipa_symbol.len() == 1 {
+                                // might also be a pre-modifier
+                                if let Some(modifier) = Modifier::from_str(&possible_ipa_symbol)
+                                    && modifier.is_pre()
+                                {
+                                    iter.next();
+                                    possible_ipa_symbol.pop();
+
+                                    modifiers.enable(modifier);
+
+                                    continue;
+                                }
+
+                                return Err(SegmentError::NoMatchingIPASymbol(possible_ipa_symbol));
+                            } else {
+                                possible_ipa_symbol.pop();
+
+                                let Some(exact_match) =
+                                    ipa_inventory.find_exact_match(&possible_ipa_symbol)
+                                else {
+                                    return Err(SegmentError::NoMatchingIPASymbol(
+                                        possible_ipa_symbol,
+                                    ));
+                                };
+
+                                base_ipa = Some(exact_match);
+                            }
+
+                            continue;
                         }
-                        _ => modifiers.enable(modifier),
-                    }
+                        1 => {
+                            iter.next();
+                            // either matches perfectly, or the only symbol that begins the same
+                            if matches[0].symbol == possible_ipa_symbol {
+                                base_ipa = Some(matches[0]);
+                            } else {
+                                while let Some(inner_c) = iter.peek() {
+                                    possible_ipa_symbol.push(*inner_c);
+
+                                    if matches[0].symbol == possible_ipa_symbol {
+                                        iter.next();
+                                        base_ipa = Some(matches[0]);
+                                        break;
+                                    } else if matches[0].symbol.starts_with(&possible_ipa_symbol) {
+                                        iter.next();
+                                        continue;
+                                    } else {
+                                        return Err(SegmentError::NoMatchingIPASymbol(
+                                            possible_ipa_symbol,
+                                        ));
+                                    }
+                                }
+                            }
+
+                            continue;
+                        }
+                        // 2 or more possible matches
+                        _ => {
+                            iter.next();
+
+                            if iter.peek().is_none() {
+                                base_ipa = ipa_inventory.find_exact_match(&possible_ipa_symbol);
+                            }
+
+                            continue;
+                        }
+                    };
+                }
+
+                // a modifier
+                // can only be a post-modifier, since we cannot get here without finding an ipa symbol
+                if let Some(modifier) = Modifier::from_str(&c.to_string()) {
+                    modifiers.enable(modifier);
 
                     iter.next();
                 } else {
-                    // not a modifier, not part of the previous IPA, and not a new IPA => error
                     break;
-                    // return Err(SegmentError::NoMatchingIPASymbol(possible_ipa_symbol));
                 }
             }
 
             let ipa: IPA = IPA::with_modifiers(
-                last_exact_match.ok_or_else(|| {
+                base_ipa.ok_or_else(|| {
                     SegmentError::NoMatchingIPASymbol(possible_ipa_symbol.clone())
                 })?,
                 modifiers,
