@@ -140,6 +140,7 @@ impl Segment {
 
             while let Some(c) = iter.peek() {
                 if ['ˈ', '\'', '.', 'ˌ', '_'].contains(c) {
+                    base_ipa = ipa_inventory.find_exact_match(&possible_ipa_symbol);
                     break;
                 }
 
