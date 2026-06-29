@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use std::ops::{Deref, Index, IndexMut};
 use strum_macros::FromRepr;
 
@@ -319,6 +321,12 @@ impl Modifier {
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Default)]
 pub struct ModifierSet([bool; 31]);
+
+impl ModifierSet {
+    pub const fn blank() -> Self {
+        Self([false; 31])
+    }
+}
 
 impl Deref for ModifierSet {
     type Target = [bool; 31];

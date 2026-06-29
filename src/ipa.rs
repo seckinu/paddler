@@ -1,8 +1,4 @@
-use std::{
-    collections::HashMap,
-    sync::{Arc, OnceLock},
-};
-
+#![allow(dead_code)]
 use crate::feature::FeatureSet;
 use crate::modifier::ModifierSet;
 
@@ -61,61 +57,9 @@ impl IPA {
 }
 
 #[derive(Debug)]
-pub struct IPAInventory(Arc<[IPA]>);
-
-pub static IPA_INVENTORY: OnceLock<IPAInventory> = OnceLock::new();
-pub static IPA_SYMBOLS: OnceLock<HashMap<&str, &IPA>> = OnceLock::new();
+pub struct IPAInventory(pub &'static [IPA]);
 
 impl IPAInventory {
-    pub fn global() -> &'static Self {
-        let result = IPA_INVENTORY.get_or_init(|| Self::get_from_embedded_csv());
-
-        IPA_SYMBOLS.get_or_init(|| {
-            result
-                .0
-                .iter()
-                .map(|ipa| (ipa.symbol, ipa))
-                .collect::<HashMap<_, _>>()
-        });
-
-        result
-    }
-
-    fn get_from_embedded_csv() -> Self {
-        let csv_data = include_str!("../ipa_base.csv");
-        let mut ipa_list = Vec::new();
-
-        for (index, line) in csv_data.lines().enumerate() {
-            if index == 0 || line.trim().is_empty() {
-                continue;
-            }
-
-            let mut cols = line.split(',');
-
-            let Some(symbol) = cols.next() else {
-                continue;
-            };
-            let mut features = FeatureSet::default();
-
-            for i in 0..24 {
-                let Some(sign) = cols.next() else {
-                    break;
-                };
-                features[i] = sign.trim().into()
-            }
-
-            ipa_list.push(IPA::new(symbol, features));
-        }
-        IPAInventory(ipa_list.into())
-    }
-
-    pub fn find_exact_match(&self, value: &str) -> Option<&IPA> {
-        IPA_SYMBOLS
-            .get()
-            .and_then(|symbols| symbols.get(value))
-            .map(|v| *v)
-    }
-
     pub fn find_possible_matches(&self, value: &str) -> Vec<&IPA> {
         self.0
             .iter()
