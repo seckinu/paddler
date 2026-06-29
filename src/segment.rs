@@ -3,8 +3,9 @@ use std::{iter::Peekable, str::FromStr};
 use thiserror::Error;
 
 use crate::{
+    IPA_INVENTORY,
     feature::FeatureSet,
-    ipa::{IPA, IPAInventory},
+    ipa::IPA,
     modifier::{Modifier, ModifierSet},
 };
 
@@ -98,8 +99,6 @@ impl Segment {
             return Ok(None);
         };
 
-        let ipa_inventory = IPAInventory::global();
-
         if matches!(peek, 'ˈ' | '\'') {
             iter.next();
             Ok(Some(Segment::Stress))
@@ -140,7 +139,7 @@ impl Segment {
 
             while let Some(c) = iter.peek() {
                 if ['ˈ', '\'', '.', 'ˌ', '_'].contains(c) {
-                    base_ipa = ipa_inventory.find_exact_match(&possible_ipa_symbol);
+                    base_ipa = IPA_INVENTORY.find_exact_match(&possible_ipa_symbol);
                     break;
                 }
 
@@ -152,7 +151,7 @@ impl Segment {
 
                     possible_ipa_symbol.push(*c);
                     if matches.len() == 0 {
-                        matches = ipa_inventory.find_possible_matches(&possible_ipa_symbol)
+                        matches = IPA_INVENTORY.find_possible_matches(&possible_ipa_symbol)
                     } else {
                         matches.retain(|ipa| ipa.symbol.starts_with(&possible_ipa_symbol))
                     };
@@ -181,7 +180,7 @@ impl Segment {
                                 possible_ipa_symbol.pop();
 
                                 let Some(exact_match) =
-                                    ipa_inventory.find_exact_match(&possible_ipa_symbol)
+                                    IPA_INVENTORY.find_exact_match(&possible_ipa_symbol)
                                 else {
                                     return Err(SegmentError::NoMatchingIPASymbol(
                                         possible_ipa_symbol,
@@ -224,7 +223,7 @@ impl Segment {
                             iter.next();
 
                             if iter.peek().is_none() {
-                                base_ipa = ipa_inventory.find_exact_match(&possible_ipa_symbol);
+                                base_ipa = IPA_INVENTORY.find_exact_match(&possible_ipa_symbol);
                             }
 
                             continue;

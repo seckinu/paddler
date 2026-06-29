@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use std::{
     ops::{Index, IndexMut},
     str::FromStr,
@@ -142,7 +144,7 @@ impl From<&str> for FeatureState {
 }
 
 #[derive(Debug, Eq, Copy, Clone, Default)]
-pub struct FeatureSet([FeatureState; 24]);
+pub struct FeatureSet(pub [FeatureState; 24]);
 
 impl IndexMut<Feature> for FeatureSet {
     fn index_mut(&mut self, index: Feature) -> &mut Self::Output {
