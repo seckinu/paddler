@@ -1,20 +1,19 @@
-use smol_str::{SmolStr, ToSmolStr};
-use std::{fmt::Display, path::PathBuf};
+use std::fmt::Display;
 
 #[derive(Debug, Clone, PartialEq, Eq, Ord)]
-pub struct Word {
-    pub orthography: SmolStr,
-    pub surface: SmolStr,
+pub struct Word<'a> {
+    pub orthography: &'a str,
+    pub surface: &'a str,
 }
 
-impl PartialOrd for Word {
+impl<'a> PartialOrd for Word<'a> {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         self.orthography.partial_cmp(&other.orthography)
     }
 }
 
-impl Word {
-    pub fn new(orthography: SmolStr, surface: SmolStr) -> Self {
+impl<'a> Word<'a> {
+    pub fn new(orthography: &'a str, surface: &'a str) -> Self {
         Self {
             orthography,
             surface,
@@ -22,30 +21,8 @@ impl Word {
     }
 }
 
-impl Display for Word {
+impl<'a> Display for Word<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}, {}", self.orthography, self.surface)
     }
-}
-
-pub fn parse_words_from_tsv(file_path: PathBuf) -> Result<Vec<Word>, std::io::Error> {
-    let mut words = Vec::new();
-    let content = std::fs::read_to_string(file_path)?;
-
-    for line in content.lines() {
-        let mut parts = line.split('\t');
-
-        // underlying not yet implemented
-        if let (Some(orthography), Some(surface)) = (parts.next(), parts.next()) {
-            for surface in surface.split(',').map(|s| {
-                s.trim()
-                    .trim_end_matches(['/', ']'])
-                    .trim_start_matches(['/', '['])
-            }) {
-                words.push(Word::new(orthography.to_smolstr(), surface.to_smolstr()));
-            }
-        }
-    }
-
-    Ok(words)
 }

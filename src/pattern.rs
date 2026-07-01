@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use rayon::{
     iter::{IntoParallelRefIterator, ParallelIterator},
     slice::ParallelSliceMut,
@@ -5,6 +7,7 @@ use rayon::{
 use thiserror::Error;
 
 use crate::{
+    dictionary::Dictionary,
     segment::{Segment, SegmentError, SegmentMatchResult},
     word::Word,
 };
@@ -25,6 +28,14 @@ pub struct Pattern {
     anchored_end: bool,
 }
 
+impl FromStr for Pattern {
+    type Err = PatternError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::new(s)
+    }
+}
+
 impl Pattern {
     pub fn new(pattern_str: &str) -> Result<Self, PatternError> {
         let anchored_start = pattern_str.starts_with('#');
@@ -39,10 +50,6 @@ impl Pattern {
             anchored_start,
             anchored_end,
         })
-    }
-
-    pub fn from_str(pattern_str: &str) -> Result<Self, PatternError> {
-        Self::new(pattern_str)
     }
 
     pub fn matches(&self, word: &Word) -> bool {
@@ -112,11 +119,12 @@ impl Pattern {
         }
     }
 
-    pub fn find_matches<'a>(&self, words: &'a Vec<Word>) -> Vec<&'a Word> {
-        let mut matches = words
+    pub fn find_matches<'a>(&self, dict: &'a Dictionary) -> Vec<&'a Word<'a>> {
+        let mut matches: Vec<&'a Word<'a>> = dict
+            .0
             .par_iter()
             .filter(|word| self.matches(word))
-            .collect::<Vec<&Word>>();
+            .collect();
 
         matches.par_sort();
 

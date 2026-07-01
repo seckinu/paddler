@@ -1,3 +1,4 @@
+pub mod dictionary;
 pub mod feature;
 pub mod ipa;
 pub mod modifier;
