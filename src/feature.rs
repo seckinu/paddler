@@ -100,8 +100,8 @@ impl Feature {
 
             s if s.starts_with("lab") => Some(Feature::Labial),
 
-            s if s.starts_with("hi") => Some(Feature::High),
-            s if s.starts_with("lo") => Some(Feature::Low),
+            s if s.starts_with("high") => Some(Feature::High),
+            s if s.starts_with("low") => Some(Feature::Low),
 
             s if s.starts_with("back") => Some(Feature::Back),
             s if s.starts_with("bck") => Some(Feature::Back),
@@ -110,8 +110,13 @@ impl Feature {
             s if s.starts_with("rnd") => Some(Feature::Round),
 
             s if s.starts_with("velaric") => Some(Feature::Velaric),
+            s if s.starts_with("velar") => Some(Feature::Velaric),
+
             s if s.starts_with("tense") => Some(Feature::Tense),
+
             s if s.starts_with("long") => Some(Feature::Long),
+            s if s.starts_with("lng") => Some(Feature::Long),
+
             s if s.starts_with("hitone") => Some(Feature::HighTone),
             s if s.starts_with("hireg") => Some(Feature::HighRegister),
             _ => None,
