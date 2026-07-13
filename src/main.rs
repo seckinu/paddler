@@ -9,10 +9,27 @@ struct Args {
 
     #[arg(short, long, default_value = "en_US.txt")]
     dict: PathBuf,
+
+    #[arg(short, long)]
+    segmentize: bool,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Args = Args::parse();
+
+    if args.segmentize {
+        let segments = args
+            .pattern
+            .segments
+            .iter()
+            .map(|segment| format!("{segment}"))
+            .collect::<Vec<_>>()
+            .join(", ");
+
+        println!("{segments}");
+
+        return Ok(());
+    }
 
     let dictionary = Dictionary::from_file(args.dict)?;
 

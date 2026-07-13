@@ -1,13 +1,16 @@
 #![allow(dead_code)]
 
 use std::{
+    fmt::Display,
     ops::{Index, IndexMut},
     str::FromStr,
 };
 
+use strum_macros::FromRepr;
+
 use crate::modifier::{Modifier, ModifierSet};
 
-#[derive(Debug, PartialEq, Eq, Copy, Clone, Hash)]
+#[derive(Debug, PartialEq, Eq, Copy, Clone, Hash, FromRepr)]
 pub enum Feature {
     Syllabic,
     Sonorant,
@@ -150,6 +153,33 @@ impl From<&str> for FeatureState {
 
 #[derive(Debug, Eq, Copy, Clone, Default)]
 pub struct FeatureSet(pub [FeatureState; 24]);
+
+impl Display for FeatureSet {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let features: Vec<String> = self
+            .0
+            .iter()
+            .enumerate()
+            .filter_map(|(idx, state)| {
+                if matches!(state, FeatureState::Neutral) {
+                    return None;
+                }
+
+                let sign: &str = match state {
+                    FeatureState::Positive => "+",
+                    FeatureState::Negative => "-",
+                    FeatureState::Neutral => unreachable!(),
+                };
+
+                let feature: Feature = Feature::from_repr(idx)?;
+
+                return Some(format!("{sign}{}", feature.to_string()));
+            })
+            .collect();
+
+        f.write_str(&format!("{}", features.join(", ")))
+    }
+}
 
 impl IndexMut<Feature> for FeatureSet {
     fn index_mut(&mut self, index: Feature) -> &mut Self::Output {
