@@ -1,13 +1,16 @@
 #![allow(dead_code)]
 
 use std::{
+    fmt::Display,
     ops::{Index, IndexMut},
     str::FromStr,
 };
 
+use strum_macros::FromRepr;
+
 use crate::modifier::{Modifier, ModifierSet};
 
-#[derive(Debug, PartialEq, Eq, Copy, Clone, Hash)]
+#[derive(Debug, PartialEq, Eq, Copy, Clone, Hash, FromRepr)]
 pub enum Feature {
     Syllabic,
     Sonorant,
@@ -100,8 +103,8 @@ impl Feature {
 
             s if s.starts_with("lab") => Some(Feature::Labial),
 
-            s if s.starts_with("hi") => Some(Feature::High),
-            s if s.starts_with("lo") => Some(Feature::Low),
+            s if s.starts_with("high") => Some(Feature::High),
+            s if s.starts_with("low") => Some(Feature::Low),
 
             s if s.starts_with("back") => Some(Feature::Back),
             s if s.starts_with("bck") => Some(Feature::Back),
@@ -110,8 +113,13 @@ impl Feature {
             s if s.starts_with("rnd") => Some(Feature::Round),
 
             s if s.starts_with("velaric") => Some(Feature::Velaric),
+            s if s.starts_with("velar") => Some(Feature::Velaric),
+
             s if s.starts_with("tense") => Some(Feature::Tense),
+
             s if s.starts_with("long") => Some(Feature::Long),
+            s if s.starts_with("lng") => Some(Feature::Long),
+
             s if s.starts_with("hitone") => Some(Feature::HighTone),
             s if s.starts_with("hireg") => Some(Feature::HighRegister),
             _ => None,
@@ -145,6 +153,33 @@ impl From<&str> for FeatureState {
 
 #[derive(Debug, Eq, Copy, Clone, Default)]
 pub struct FeatureSet(pub [FeatureState; 24]);
+
+impl Display for FeatureSet {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let features: Vec<String> = self
+            .0
+            .iter()
+            .enumerate()
+            .filter_map(|(idx, state)| {
+                if matches!(state, FeatureState::Neutral) {
+                    return None;
+                }
+
+                let sign: &str = match state {
+                    FeatureState::Positive => "+",
+                    FeatureState::Negative => "-",
+                    FeatureState::Neutral => unreachable!(),
+                };
+
+                let feature: Feature = Feature::from_repr(idx)?;
+
+                return Some(format!("{sign}{}", feature.to_string()));
+            })
+            .collect();
+
+        f.write_str(&format!("{}", features.join(", ")))
+    }
+}
 
 impl IndexMut<Feature> for FeatureSet {
     fn index_mut(&mut self, index: Feature) -> &mut Self::Output {

@@ -23,7 +23,7 @@ pub enum PatternError {
 
 #[derive(Debug, Clone)]
 pub struct Pattern {
-    segments: Vec<Segment>,
+    pub segments: Vec<Segment>,
     anchored_start: bool,
     anchored_end: bool,
 }

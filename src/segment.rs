@@ -1,4 +1,4 @@
-use std::{iter::Peekable, str::FromStr};
+use std::{fmt::Display, iter::Peekable, str::FromStr};
 
 use thiserror::Error;
 
@@ -32,16 +32,36 @@ pub enum Segment {
     Syllable,
 }
 
-impl Segment {
-    pub fn to_string(&self) -> Option<String> {
+impl Display for Segment {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Segment::IPA(ipa) => Some(ipa.to_string()),
-            Segment::FeatureSet(_) => None,
-            Segment::Any => None,
-            Segment::Stress => Some("'".to_string()),
-            Segment::SecondaryStress => Some(",".to_string()),
-            Segment::Syllable => Some(".".to_string()),
-        }
+            Segment::IPA(ipa) => {
+                f.write_str("IPA: { ")?;
+                f.write_str(&ipa.to_string())?;
+
+                // let features = ipa.features;
+                // f.write_str(&format!(", Features: [ {features} ]"))?;
+
+                f.write_str(" }")?;
+            }
+            Segment::FeatureSet(feature_set) => {
+                f.write_str(&format!("FeatureSet: [ {feature_set} ]"))?;
+            }
+            Segment::Any => {
+                f.write_str("Any")?;
+            }
+            Segment::Stress => {
+                f.write_str("Stress")?;
+            }
+            Segment::SecondaryStress => {
+                f.write_str("SecondaryStress")?;
+            }
+            Segment::Syllable => {
+                f.write_str("Syllable")?;
+            }
+        };
+
+        Ok(())
     }
 }
 
