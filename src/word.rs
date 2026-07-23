@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-#[derive(Debug, Clone, PartialEq, Eq, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, Ord, Copy)]
 pub struct Word<'a> {
     pub orthography: &'a str,
     pub surface: &'a str,

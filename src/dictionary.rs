@@ -2,7 +2,7 @@ use std::{error::Error, path::PathBuf};
 
 use crate::{pattern::Pattern, word::Word};
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Dictionary<'a>(pub Vec<Word<'a>>);
 
 impl<'a> Dictionary<'a> {
