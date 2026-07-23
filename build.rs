@@ -14,7 +14,7 @@ use feature::FeatureState;
 fn main() {
     let out_dir = env::var_os("OUT_DIR").unwrap();
 
-    let csv_data = include_str!("./ipa_base.csv");
+    let csv_data = include_str!("./data/ipa_base.csv");
 
     let mut ipa_inv_codegen = String::new();
     ipa_inv_codegen.push_str(
