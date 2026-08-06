@@ -153,7 +153,7 @@ impl Segment {
         } else {
             let mut modifiers: ModifierSet = Default::default();
             let mut possible_ipa_symbol = String::with_capacity(4);
-            let mut matches: Vec<&IPA> = Vec::new();
+            let mut matches: &[usize];
 
             let mut base_ipa: Option<&IPA> = None;
 
@@ -163,18 +163,14 @@ impl Segment {
                     break;
                 }
 
-                if base_ipa.is_none() {
-                    if *c == '\u{361}' {
-                        iter.next();
-                        continue;
-                    }
+                if *c == '\u{361}' {
+                    iter.next();
+                    continue;
+                }
 
+                if base_ipa.is_none() {
                     possible_ipa_symbol.push(*c);
-                    if matches.len() == 0 {
-                        matches = IPA_INVENTORY.find_possible_matches(&possible_ipa_symbol)
-                    } else {
-                        matches.retain(|ipa| ipa.symbol.starts_with(&possible_ipa_symbol))
-                    };
+                    matches = IPA_INVENTORY.find_possible_matches(&possible_ipa_symbol);
 
                     match matches.len() {
                         // no matches
@@ -215,17 +211,18 @@ impl Segment {
                         1 => {
                             iter.next();
                             // either matches perfectly, or the only symbol that begins the same
-                            if matches[0].symbol == possible_ipa_symbol {
-                                base_ipa = Some(matches[0]);
+                            let ipa = &IPA_INVENTORY[matches[0]];
+                            if ipa.symbol == possible_ipa_symbol {
+                                base_ipa = Some(ipa);
                             } else {
                                 while let Some(inner_c) = iter.peek() {
                                     possible_ipa_symbol.push(*inner_c);
 
-                                    if matches[0].symbol == possible_ipa_symbol {
+                                    if ipa.symbol == possible_ipa_symbol {
                                         iter.next();
-                                        base_ipa = Some(matches[0]);
+                                        base_ipa = Some(&ipa);
                                         break;
-                                    } else if matches[0].symbol.starts_with(&possible_ipa_symbol) {
+                                    } else if ipa.symbol.starts_with(&possible_ipa_symbol) {
                                         iter.next();
                                         continue;
                                     } else {

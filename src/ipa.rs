@@ -1,4 +1,6 @@
 #![allow(dead_code)]
+use std::ops::Index;
+
 use crate::feature::FeatureSet;
 use crate::modifier::ModifierSet;
 
@@ -59,11 +61,10 @@ impl IPA {
 #[derive(Debug)]
 pub struct IPAInventory(pub &'static [IPA]);
 
-impl IPAInventory {
-    pub fn find_possible_matches(&self, value: &str) -> Vec<&IPA> {
-        self.0
-            .iter()
-            .filter(|ipa| ipa.symbol.starts_with(value))
-            .collect()
+impl Index<usize> for IPAInventory {
+    type Output = IPA;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.0[index]
     }
 }
