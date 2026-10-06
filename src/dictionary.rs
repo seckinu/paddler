@@ -28,7 +28,7 @@ impl<'a> Dictionary<'a> {
         Ok(Self(words))
     }
 
-    pub fn find_matches(&'a self, pattern: Pattern) -> Vec<&'a Word<'a>> {
-        pattern.find_matches(&self)
+    pub fn find_matches(&'a self, pattern: Pattern, strict: bool) -> Vec<&'a Word<'a>> {
+        pattern.find_matches(&self, strict)
     }
 }

@@ -12,6 +12,6 @@ mod tests {
 
         let word: Word = Word::new("'bout", "ˈbaʊt");
 
-        assert!(pattern.matches(&word));
+        assert!(pattern.matches(&word, false));
     }
 }

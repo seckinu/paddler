@@ -12,6 +12,9 @@ struct Args {
 
     #[arg(short, long)]
     segmentize: bool,
+
+    #[arg(long)]
+    strict: bool,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -33,7 +36,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let dictionary = Dictionary::from_file(args.dict)?;
 
-    let matches = dictionary.find_matches(args.pattern);
+    let matches = dictionary.find_matches(args.pattern, args.strict);
     for word in matches {
         println!("{}", word);
     }

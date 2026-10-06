@@ -52,7 +52,7 @@ impl Pattern {
         })
     }
 
-    pub fn matches(&self, word: &Word) -> bool {
+    pub fn matches(&self, word: &Word, strict: bool) -> bool {
         let mut word_iter = word.surface.chars().peekable();
 
         let mut word_segments: Vec<Segment> = Vec::new();
@@ -82,10 +82,10 @@ impl Pattern {
             let word_segment = word_segments.get(word_idx);
             let pattern_segment = self.segments.get(pattern_idx);
 
-            match (word_segment, pattern_segment) {
-                (None, None) => return true,
-                (None, Some(_)) => return false,
-                (Some(_), None) => {
+            match (word_segment, pattern_segment, strict) {
+                (None, None, _) => return true,
+                (None, Some(_), _) => return false,
+                (Some(_), None, _) => {
                     if self.anchored_end {
                         if self.anchored_start {
                             return false;
@@ -98,7 +98,7 @@ impl Pattern {
                         return true;
                     }
                 }
-                (Some(ws), Some(ps)) => match ps.matches(ws) {
+                (Some(ws), Some(ps), false) => match ps.matches(ws) {
                     SegmentMatchResult::Match => {
                         word_idx += 1;
                         pattern_idx += 1;
@@ -116,15 +116,31 @@ impl Pattern {
                         pattern_idx = 0;
                     }
                 },
+                (Some(ws), Some(ps), true) => match ps.matches(ws) {
+                    SegmentMatchResult::Match => {
+                        word_idx += 1;
+                        pattern_idx += 1;
+                    }
+
+                    _ => {
+                        if self.anchored_start {
+                            return false;
+                        }
+
+                        start_word_idx += 1;
+                        word_idx = start_word_idx;
+                        pattern_idx = 0;
+                    }
+                },
             }
         }
     }
 
-    pub fn find_matches<'a>(&self, dict: &'a Dictionary) -> Vec<&'a Word<'a>> {
+    pub fn find_matches<'a>(&self, dict: &'a Dictionary, strict: bool) -> Vec<&'a Word<'a>> {
         let mut matches: Vec<&'a Word<'a>> = dict
             .0
             .par_iter()
-            .filter(|word| self.matches(word))
+            .filter(|word| self.matches(word, strict))
             .collect();
 
         matches.par_sort();
