@@ -127,7 +127,7 @@ impl Segment {
 
             (
                 Segment::Syllable(true) | Segment::Stress(true) | Segment::SecondaryStress(true),
-                a,
+                _,
             ) => SegmentMatchResult::SkipPattern,
 
             _ => {
