@@ -13,13 +13,17 @@ use crate::{
 pub enum SegmentError {
     #[error("No matching IPA symbol found: {0}")]
     NoMatchingIPASymbol(String),
+
+    #[error("Generix syntax error")]
+    SyntaxError,
 }
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum SegmentMatchResult {
     Match,
     NoMatch,
-    Skip,
+    SkipWord,
+    SkipPattern,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -27,9 +31,9 @@ pub enum Segment {
     IPA(IPA),
     FeatureSet(FeatureSet),
     Any,
-    Stress,
-    SecondaryStress,
-    Syllable,
+    Stress(bool),
+    SecondaryStress(bool),
+    Syllable(bool),
 }
 
 impl Display for Segment {
@@ -50,13 +54,13 @@ impl Display for Segment {
             Segment::Any => {
                 f.write_str("Any")?;
             }
-            Segment::Stress => {
+            Segment::Stress(_) => {
                 f.write_str("Stress")?;
             }
-            Segment::SecondaryStress => {
+            Segment::SecondaryStress(_) => {
                 f.write_str("SecondaryStress")?;
             }
-            Segment::Syllable => {
+            Segment::Syllable(_) => {
                 f.write_str("Syllable")?;
             }
         };
@@ -66,6 +70,7 @@ impl Display for Segment {
 }
 
 impl Segment {
+    // self is from the pattern, other is from the word / dictionary
     pub fn matches(&self, other: &Segment) -> SegmentMatchResult {
         match (self, other) {
             (Segment::Any, _) => SegmentMatchResult::Match,
@@ -90,14 +95,44 @@ impl Segment {
                     SegmentMatchResult::NoMatch
                 }
             }
-            (Segment::Stress, Segment::Stress) => SegmentMatchResult::Match,
-            (Segment::Syllable, Segment::Syllable) => SegmentMatchResult::Match,
-            (Segment::Syllable, Segment::Stress | Segment::SecondaryStress) => {
-                SegmentMatchResult::Match
+            (Segment::Stress(absent), Segment::Stress(_)) => {
+                if *absent {
+                    SegmentMatchResult::NoMatch
+                } else {
+                    SegmentMatchResult::Match
+                }
             }
+            (Segment::SecondaryStress(absent), Segment::SecondaryStress(_)) => {
+                if *absent {
+                    SegmentMatchResult::NoMatch
+                } else {
+                    SegmentMatchResult::Match
+                }
+            }
+
+            (Segment::Syllable(absent), Segment::Syllable(_)) => {
+                if *absent {
+                    SegmentMatchResult::NoMatch
+                } else {
+                    SegmentMatchResult::Match
+                }
+            }
+            (Segment::Syllable(absent), Segment::Stress(_) | Segment::SecondaryStress(_)) => {
+                if *absent {
+                    SegmentMatchResult::NoMatch
+                } else {
+                    SegmentMatchResult::Match
+                }
+            }
+
+            (
+                Segment::Syllable(true) | Segment::Stress(true) | Segment::SecondaryStress(true),
+                a,
+            ) => SegmentMatchResult::SkipPattern,
+
             _ => {
                 if other.is_skippable() {
-                    SegmentMatchResult::Skip
+                    SegmentMatchResult::SkipWord
                 } else {
                     SegmentMatchResult::NoMatch
                 }
@@ -108,7 +143,7 @@ impl Segment {
     pub fn is_skippable(&self) -> bool {
         matches!(
             self,
-            Segment::Stress | Segment::Syllable | Segment::SecondaryStress
+            Segment::Stress(_) | Segment::Syllable(_) | Segment::SecondaryStress(_)
         )
     }
 
@@ -121,16 +156,32 @@ impl Segment {
 
         if matches!(peek, 'ˈ' | '\'') {
             iter.next();
-            Ok(Some(Segment::Stress))
+            Ok(Some(Segment::Stress(false)))
         } else if matches!(peek, '.') {
             iter.next();
-            Ok(Some(Segment::Syllable))
+            Ok(Some(Segment::Syllable(false)))
         } else if matches!(peek, '_') {
             iter.next();
             Ok(Some(Segment::Any))
         } else if matches!(peek, 'ˌ') {
             iter.next();
-            Ok(Some(Segment::SecondaryStress))
+            Ok(Some(Segment::SecondaryStress(false)))
+        } else if matches!(peek, '~') {
+            iter.next();
+
+            let Some(inner_peek) = iter.next() else {
+                return Err(SegmentError::SyntaxError);
+            };
+
+            return if matches!(inner_peek, 'ˈ' | '\'') {
+                Ok(Some(Segment::Stress(true)))
+            } else if matches!(inner_peek, '.') {
+                Ok(Some(Segment::Syllable(true)))
+            } else if matches!(inner_peek, 'ˌ') {
+                Ok(Some(Segment::SecondaryStress(true)))
+            } else {
+                Err(SegmentError::SyntaxError)
+            };
         } else if matches!(peek, '[') {
             iter.next();
 

@@ -98,14 +98,15 @@ impl Pattern {
                         return true;
                     }
                 }
-                (Some(ws), Some(ps)) => {
-                    let match_result: SegmentMatchResult = ps.matches(ws);
-                    if match_result == SegmentMatchResult::Match {
+                (Some(ws), Some(ps)) => match ps.matches(ws) {
+                    SegmentMatchResult::Match => {
                         word_idx += 1;
                         pattern_idx += 1;
-                    } else if match_result == SegmentMatchResult::Skip {
-                        word_idx += 1;
-                    } else {
+                    }
+                    SegmentMatchResult::SkipWord => word_idx += 1,
+                    SegmentMatchResult::SkipPattern => pattern_idx += 1,
+
+                    SegmentMatchResult::NoMatch => {
                         if self.anchored_start {
                             return false;
                         }
@@ -114,7 +115,7 @@ impl Pattern {
                         word_idx = start_word_idx;
                         pattern_idx = 0;
                     }
-                }
+                },
             }
         }
     }
