@@ -25,13 +25,13 @@ pub enum Segment {
     IPA(IPA),
     FeatureSet(FeatureSet),
     Any,
-    Stress,
-    SecondaryStress,
-    Syllable,
+    Stress(bool), // bool marks absence
+    SecondaryStress(bool),
+    Syllable(bool),
 }
 ```
 
-### Tokens
+## Segments
 
 - IPA:
   - An IPA entry, that must exist in [[ipa_base.csv]]
@@ -42,10 +42,13 @@ pub enum Segment {
   - The '_' character that matches any other segment
 - Stress
   - IPA representation(ˈ) or for simpler use, a single tick (')
+  - `~` character before this segment marks the segment as absent.
 - SecondaryStress
   - The 'ˌ' character
+  - `~` character before this segment marks the segment as absent.
 - Syllable
   - The dot character(.) that represents a syllable boundary
+  - `~` character before this segment marks the segment as absent.
 
 ## Usage
 
@@ -59,12 +62,26 @@ Options:
   -d, --dict <DICT>  [default: en_US.txt]
   -h, --help         Print help
   -V, --version      Print version
+  --segmentize       Prints the segments
+  --strict           Runs the pattern matching in strict mode
 ```
 
-### Examples
+## Strict Mode
+
+Strict mode refers to the fact that skippable segments should not be skipped.
+
+By default, Paddler operates on non-strict mode, which allows the SyllableBoundary, Stress, and SecondaryStress segments in words to be skipped. This means both: "#a.b", and "#ab"  will match /a.b/; but "#a.b" won't match /ab/, as the Segments in the pattern cannot be skipped.
+
+In strict mode however, "#ab" will only match /ab/. Strict mode removes the skipping feature.
+
+## Absence Marker
+
+Certain segments (SyllableBoundary, Stress, SecondaryStress) can be marked as absent via putting the `~` symbol before the segment. This makes it so that Paddler checks for the absence of that segment. For example: "#z" will match words starting with /z/ which may also have a stress marker before it, while "#~'z" will match words that are starting with /z/ and don't have a stress marker before it. 
+
+## Examples
 
 ```bash
-$ paddler "#[cons][-cons]ŋk#"     
+$ paddler "#[cons][-cons]ŋk#"
 banc, ˈbæŋk
 bank, ˈbæŋk
 banke, ˈbæŋk
@@ -76,7 +93,7 @@ benke, ˈbɛŋk
 Or with a custom dictionary:
 
 ```bash
-$ paddler "#[cons][-cons]ŋk# --dict=cmudict-ipa.tsv"     
+$ paddler "#[cons][-cons]ŋk# --dict=cmudict-ipa.tsv"
 BANC, 'bæŋk
 BANK, 'bæŋk
 BANKE, 'bæŋk
