@@ -28,6 +28,14 @@ impl<'a> Dictionary<'a> {
         Ok(Self(words))
     }
 
+    pub fn find_matches_map<F, O>(&self, pattern: Pattern, strict: bool, map_op: F) -> Vec<O>
+    where
+        F: Fn(&'_ Word<'_>) -> O + Sync + Send,
+        O: Ord + Send,
+    {
+        pattern.find_matches_map(&self, strict, map_op)
+    }
+
     pub fn find_matches(&'a self, pattern: Pattern, strict: bool) -> Vec<&'a Word<'a>> {
         pattern.find_matches(&self, strict)
     }

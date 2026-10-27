@@ -136,6 +136,28 @@ impl Pattern {
         }
     }
 
+    pub fn find_matches_map<'a, F, O>(
+        &self,
+        dict: &'a Dictionary,
+        strict: bool,
+        map_op: F,
+    ) -> Vec<O>
+    where
+        F: Fn(&'a Word) -> O + Sync + Send,
+        O: Ord + Send,
+    {
+        let mut matches: Vec<O> = dict
+            .0
+            .par_iter()
+            .filter(|word| self.matches(word, strict))
+            .map(map_op)
+            .collect();
+
+        matches.par_sort();
+
+        matches
+    }
+
     pub fn find_matches<'a>(&self, dict: &'a Dictionary, strict: bool) -> Vec<&'a Word<'a>> {
         let mut matches: Vec<&'a Word<'a>> = dict
             .0
