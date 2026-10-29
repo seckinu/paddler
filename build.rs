@@ -2,10 +2,13 @@ use std::env;
 use std::fs;
 use std::path::Path;
 
+#[allow(dead_code)]
 #[path = "src/feature.rs"]
 mod feature;
+#[allow(dead_code)]
 #[path = "src/ipa.rs"]
 mod ipa;
+#[allow(dead_code)]
 #[path = "src/modifier.rs"]
 mod modifier;
 

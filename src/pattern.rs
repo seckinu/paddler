@@ -1,16 +1,8 @@
 use std::str::FromStr;
 
-use rayon::{
-    iter::{IntoParallelRefIterator, ParallelIterator},
-    slice::ParallelSliceMut,
-};
 use thiserror::Error;
 
-use crate::{
-    dictionary::Dictionary,
-    segment::{Segment, SegmentError, SegmentMatchResult},
-    word::Word,
-};
+use crate::segment::{Segment, SegmentError, SegmentMatchResult};
 
 #[derive(Debug, Error)]
 pub enum PatternError {
@@ -52,8 +44,8 @@ impl Pattern {
         })
     }
 
-    pub fn matches(&self, word: &Word, strict: bool) -> bool {
-        let mut word_iter = word.surface.chars().peekable();
+    pub fn matches(&self, word: &str, strict: bool) -> bool {
+        let mut word_iter = word.chars().peekable();
 
         let mut word_segments: Vec<Segment> = Vec::new();
 
@@ -134,39 +126,5 @@ impl Pattern {
                 },
             }
         }
-    }
-
-    pub fn find_matches_map<'a, F, O>(
-        &self,
-        dict: &'a Dictionary,
-        strict: bool,
-        map_op: F,
-    ) -> Vec<O>
-    where
-        F: Fn(&'a Word) -> O + Sync + Send,
-        O: Ord + Send,
-    {
-        let mut matches: Vec<O> = dict
-            .0
-            .par_iter()
-            .filter(|word| self.matches(word, strict))
-            .map(map_op)
-            .collect();
-
-        matches.par_sort();
-
-        matches
-    }
-
-    pub fn find_matches<'a>(&self, dict: &'a Dictionary, strict: bool) -> Vec<&'a Word<'a>> {
-        let mut matches: Vec<&'a Word<'a>> = dict
-            .0
-            .par_iter()
-            .filter(|word| self.matches(word, strict))
-            .collect();
-
-        matches.par_sort();
-
-        matches
     }
 }

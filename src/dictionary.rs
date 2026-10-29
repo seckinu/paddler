@@ -1,6 +1,10 @@
 use std::{error::Error, path::PathBuf};
 
 use crate::{pattern::Pattern, word::Word};
+use rayon::{
+    iter::{IntoParallelRefIterator, ParallelIterator},
+    slice::ParallelSliceMut,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Dictionary<'a>(pub Vec<Word<'a>>);
@@ -28,15 +32,32 @@ impl<'a> Dictionary<'a> {
         Ok(Self(words))
     }
 
-    pub fn find_matches_map<F, O>(&self, pattern: Pattern, strict: bool, map_op: F) -> Vec<O>
+    pub fn find_matches_map<F, O>(&'a self, pattern: Pattern, strict: bool, map_op: F) -> Vec<O>
     where
-        F: Fn(&'_ Word<'_>) -> O + Sync + Send,
+        F: Fn(&'a Word) -> O + Sync + Send,
         O: Ord + Send,
     {
-        pattern.find_matches_map(&self, strict, map_op)
+        let mut matches: Vec<O> = self
+            .0
+            .par_iter()
+            .filter(|word| pattern.matches(word.surface, strict))
+            .map(map_op)
+            .collect();
+
+        matches.par_sort();
+
+        matches
     }
 
     pub fn find_matches(&'a self, pattern: Pattern, strict: bool) -> Vec<&'a Word<'a>> {
-        pattern.find_matches(&self, strict)
+        let mut matches: Vec<&'a Word<'a>> = self
+            .0
+            .par_iter()
+            .filter(|word| pattern.matches(word.surface, strict))
+            .collect();
+
+        matches.par_sort();
+
+        matches
     }
 }

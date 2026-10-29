@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use std::{
     fmt::Display,
     ops::{Index, IndexMut},

@@ -1,8 +1,6 @@
-#![allow(dead_code)]
 use std::ops::Index;
 
-use crate::feature::FeatureSet;
-use crate::modifier::ModifierSet;
+use crate::{feature::FeatureSet, modifier::ModifierSet};
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct IPA {
@@ -29,22 +27,6 @@ impl IPA {
             features,
             modifiers,
         }
-    }
-}
-
-pub trait IPAMatches<T> {
-    fn matches(&self, value: T) -> bool;
-}
-
-impl IPAMatches<FeatureSet> for IPA {
-    fn matches(&self, value: FeatureSet) -> bool {
-        value == self.features
-    }
-}
-
-impl IPAMatches<&str> for IPA {
-    fn matches(&self, value: &str) -> bool {
-        value == self.symbol
     }
 }
 

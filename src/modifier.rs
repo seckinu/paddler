@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use std::ops::{Deref, Index, IndexMut};
 use strum_macros::FromRepr;
 

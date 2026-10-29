@@ -4,3 +4,8 @@ words.txt
 test.txt
 
 ipa_all.csv
+
+en_UK.txt
+en_US.txt
+
+.nvim.lua
