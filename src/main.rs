@@ -1,6 +1,10 @@
 use clap::Parser;
 use paddler::{dictionary::Dictionary, pattern::Pattern};
-use std::path::PathBuf;
+use std::{
+    fs::File,
+    io::{BufWriter, Write},
+    path::PathBuf,
+};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -15,6 +19,9 @@ struct Args {
 
     #[arg(long)]
     strict: bool,
+
+    #[arg(short, long)]
+    out: Option<PathBuf>,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -35,10 +42,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let dictionary = Dictionary::from_file(args.dict)?;
-
     let matches = dictionary.find_matches(args.pattern, args.strict);
-    for word in matches {
-        println!("{}", word);
+
+    if let Some(out_file) = args.out {
+        let file = File::create_new(out_file)?;
+        let mut writer = BufWriter::new(file);
+
+        for word in matches {
+            writeln!(writer, "{}", word)?;
+        }
+
+        writer.flush()?;
+    } else {
+        for word in matches {
+            println!("{}", word);
+        }
     }
 
     Ok(())
