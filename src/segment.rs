@@ -1,5 +1,6 @@
 use std::{fmt::Display, iter::Peekable, str::FromStr};
 
+use itertools::Itertools;
 use thiserror::Error;
 
 use crate::{
@@ -34,6 +35,7 @@ pub enum Segment {
     Stress(bool),
     SecondaryStress(bool),
     Syllable(bool),
+    Set(Vec<Segment>),
 }
 
 impl Display for Segment {
@@ -62,6 +64,11 @@ impl Display for Segment {
             }
             Segment::Syllable(_) => {
                 f.write_str("Syllable")?;
+            }
+            Segment::Set(segments) => {
+                f.write_str("Set: { ")?;
+                f.write_str(&segments.iter().map(|s| s.to_string()).join(", "))?;
+                f.write_str("}")?;
             }
         };
 
@@ -125,6 +132,18 @@ impl Segment {
                 }
             }
 
+            (Segment::Set(segments), s2) if !s2.is_skippable() => {
+                let mut results = segments.iter().map(|s| s.matches(s2));
+
+                if results.any(|result| result == SegmentMatchResult::Match) {
+                    SegmentMatchResult::Match
+                } else if results.any(|result| result == SegmentMatchResult::SkipWord) {
+                    SegmentMatchResult::SkipPattern
+                } else {
+                    SegmentMatchResult::NoMatch
+                }
+            }
+
             (
                 Segment::Syllable(true) | Segment::Stress(true) | Segment::SecondaryStress(true),
                 _,
@@ -145,6 +164,10 @@ impl Segment {
             self,
             Segment::Stress(_) | Segment::Syllable(_) | Segment::SecondaryStress(_)
         )
+    }
+
+    const fn is_delimiter(c: char) -> bool {
+        matches!(c, 'ˈ' | '\'' | '.' | 'ˌ' | '_' | '~' | '[' | '{')
     }
 
     pub fn parse(
@@ -201,6 +224,36 @@ impl Segment {
                 .map_err(|_| SegmentError::NoMatchingIPASymbol(features_str.clone()))?;
 
             Ok(Some(Segment::FeatureSet(features)))
+        } else if matches!(peek, '{') {
+            iter.next();
+
+            let mut source = String::new();
+
+            loop {
+                match iter.next() {
+                    Some('}') => break,
+                    Some('{') => return Err(SegmentError::SyntaxError),
+                    Some(c) => source.push(c),
+                    None => return Err(SegmentError::SyntaxError),
+                }
+            }
+
+            let segments = source
+                .split(",")
+                .map(|s| {
+                    if let Ok(inner) = Self::parse_all(s) {
+                        if inner.len() != 1 {
+                            return Err(SegmentError::SyntaxError);
+                        }
+
+                        Ok(inner[0].clone())
+                    } else {
+                        return Err(SegmentError::SyntaxError);
+                    }
+                })
+                .collect::<Result<Vec<_>, _>>()?;
+
+            Ok(Some(Self::Set(segments)))
         } else {
             let mut modifiers: ModifierSet = Default::default();
             let mut possible_ipa_symbol = String::with_capacity(4);
@@ -209,7 +262,7 @@ impl Segment {
             let mut base_ipa: Option<&IPA> = None;
 
             while let Some(c) = iter.peek() {
-                if ['ˈ', '\'', '.', 'ˌ', '_'].contains(c) {
+                if Self::is_delimiter(*c) {
                     base_ipa = IPA_INVENTORY.find_exact_match(&possible_ipa_symbol);
                     break;
                 }
