@@ -38,6 +38,18 @@ pub enum Segment {
     Set(Vec<Segment>),
 }
 
+impl Segment {
+    pub fn surface_form(&self) -> Option<String> {
+        match self {
+            Segment::IPA(ipa) => Some(ipa.to_string()),
+            Segment::Stress(_) => Some("ˈ".to_string()),
+            Segment::SecondaryStress(_) => Some("ˌ".to_string()),
+            Segment::Syllable(_) => Some(".".to_string()),
+            _ => None,
+        }
+    }
+}
+
 impl Display for Segment {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {

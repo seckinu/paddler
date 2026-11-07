@@ -1,5 +1,9 @@
 use clap::Parser;
-use paddler::{dictionary::Dictionary, pattern::Pattern};
+use itertools::Itertools;
+use paddler::{
+    dictionary::Dictionary,
+    pattern::{PaddlerMatchResult, Pattern},
+};
 use std::{
     fs::File,
     io::{BufWriter, Write},
@@ -48,14 +52,29 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let file = File::create_new(out_file)?;
         let mut writer = BufWriter::new(file);
 
-        for word in matches {
+        for (word, _) in matches {
             writeln!(writer, "{}", word)?;
         }
 
         writer.flush()?;
     } else {
-        for word in matches {
-            println!("{}", word);
+        for (word, PaddlerMatchResult(segments, range)) in matches {
+            println!(
+                "{}, {} \x1b[31m{}\x1b[0m {}",
+                word.orthography,
+                segments[..range.start]
+                    .iter()
+                    .filter_map(|segment| segment.surface_form())
+                    .join(""),
+                segments[range.clone()]
+                    .iter()
+                    .filter_map(|segment| segment.surface_form())
+                    .join(" "),
+                segments[range.end..]
+                    .iter()
+                    .filter_map(|segment| segment.surface_form())
+                    .join("")
+            );
         }
     }
 

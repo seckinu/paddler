@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{ops::Range, str::FromStr};
 
 use thiserror::Error;
 
@@ -28,6 +28,8 @@ impl FromStr for Pattern {
     }
 }
 
+pub struct PaddlerMatchResult(pub Vec<Segment>, pub Range<usize>);
+
 impl Pattern {
     pub fn new(pattern_str: &str) -> Result<Self, PatternError> {
         let anchored_start = pattern_str.starts_with('#');
@@ -44,16 +46,20 @@ impl Pattern {
         })
     }
 
-    pub fn matches(&self, word: &str, strict: bool) -> bool {
+    pub fn matches(&self, word: &str, strict: bool) -> Option<PaddlerMatchResult> {
         let mut word_iter = word.chars().peekable();
 
-        let mut word_segments: Vec<Segment> = Vec::new();
-
-        let Ok(Some(ws)) = Segment::parse(&mut word_iter) else {
-            return false;
+        // Patterns that are anchored end must match till the end, thus parse all segments at once
+        let mut word_segments: Vec<Segment> = match self.anchored_end {
+            true => Segment::parse_all(word).ok()?,
+            false => {
+                if let Ok(Some(ws)) = Segment::parse(&mut word_iter) {
+                    vec![ws]
+                } else {
+                    return None;
+                }
+            }
         };
-
-        word_segments.push(ws);
 
         let mut start_word_idx = 0;
 
@@ -61,13 +67,13 @@ impl Pattern {
         let mut pattern_idx = 0;
 
         loop {
-            if word_segments.get(word_idx).is_none() {
+            if word_segments.get(word_idx).is_none() && !self.anchored_end {
                 let ws: Result<Option<Segment>, SegmentError> = Segment::parse(&mut word_iter);
 
                 if let Ok(Some(ws)) = ws {
                     word_segments.push(ws);
                 } else if ws.is_err() {
-                    return false;
+                    return None;
                 }
             }
 
@@ -75,19 +81,31 @@ impl Pattern {
             let pattern_segment = self.segments.get(pattern_idx);
 
             match (word_segment, pattern_segment, strict) {
-                (None, None, _) => return true,
-                (None, Some(_), _) => return false,
+                (None, None, _) => {
+                    if !self.anchored_end {
+                        while let Ok(Some(seg)) = Segment::parse(&mut word_iter) {
+                            word_segments.push(seg);
+                        }
+                    }
+                    return Some(PaddlerMatchResult(word_segments, start_word_idx..word_idx));
+                }
+                (None, Some(_), _) => return None,
                 (Some(_), None, _) => {
                     if self.anchored_end {
                         if self.anchored_start {
-                            return false;
+                            return None;
                         }
 
                         start_word_idx += 1;
                         word_idx = start_word_idx;
                         pattern_idx = 0;
                     } else {
-                        return true;
+                        if !self.anchored_end {
+                            while let Ok(Some(seg)) = Segment::parse(&mut word_iter) {
+                                word_segments.push(seg);
+                            }
+                        }
+                        return Some(PaddlerMatchResult(word_segments, start_word_idx..word_idx));
                     }
                 }
                 (Some(ws), Some(ps), false) => match ps.matches(ws) {
@@ -100,7 +118,7 @@ impl Pattern {
 
                     SegmentMatchResult::NoMatch => {
                         if self.anchored_start {
-                            return false;
+                            return None;
                         }
 
                         start_word_idx += 1;
@@ -116,7 +134,7 @@ impl Pattern {
 
                     _ => {
                         if self.anchored_start {
-                            return false;
+                            return None;
                         }
 
                         start_word_idx += 1;

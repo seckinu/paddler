@@ -1,6 +1,9 @@
 use std::{error::Error, path::PathBuf};
 
-use crate::{pattern::Pattern, word::Word};
+use crate::{
+    pattern::{PaddlerMatchResult, Pattern},
+    word::Word,
+};
 use rayon::{
     iter::{IntoParallelRefIterator, ParallelIterator},
     slice::ParallelSliceMut,
@@ -40,7 +43,7 @@ impl<'a> Dictionary<'a> {
         let mut matches: Vec<O> = self
             .0
             .par_iter()
-            .filter(|word| pattern.matches(word.surface, strict))
+            .filter(|word| pattern.matches(word.surface, strict).is_some())
             .map(map_op)
             .collect();
 
@@ -49,14 +52,18 @@ impl<'a> Dictionary<'a> {
         matches
     }
 
-    pub fn find_matches(&'a self, pattern: Pattern, strict: bool) -> Vec<&'a Word<'a>> {
-        let mut matches: Vec<&'a Word<'a>> = self
+    pub fn find_matches(
+        &'a self,
+        pattern: Pattern,
+        strict: bool,
+    ) -> Vec<(&'a Word<'a>, PaddlerMatchResult)> {
+        let mut matches: Vec<(&'a Word<'a>, PaddlerMatchResult)> = self
             .0
             .par_iter()
-            .filter(|word| pattern.matches(word.surface, strict))
+            .filter_map(|word| pattern.matches(word.surface, strict).map(|m| (word, m)))
             .collect();
 
-        matches.par_sort();
+        matches.par_sort_by(|a, b| a.0.cmp(b.0));
 
         matches
     }
