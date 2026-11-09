@@ -4,10 +4,9 @@ use crate::{
     pattern::{PaddlerMatchResult, Pattern},
     word::Word,
 };
-use rayon::{
-    iter::{IntoParallelRefIterator, ParallelIterator},
-    slice::ParallelSliceMut,
-};
+
+#[cfg(feature = "rayon")]
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Dictionary<'a>(pub Vec<Word<'a>>);
@@ -35,36 +34,54 @@ impl<'a> Dictionary<'a> {
         Ok(Self(words))
     }
 
+    #[cfg(feature = "rayon")]
     pub fn find_matches_map<F, O>(&'a self, pattern: Pattern, strict: bool, map_op: F) -> Vec<O>
     where
-        F: Fn(&'a Word) -> O + Sync + Send,
-        O: Ord + Send,
+        F: Fn((&'a Word, PaddlerMatchResult)) -> O + Sync + Send,
+        O: Send,
     {
-        let mut matches: Vec<O> = self
-            .0
+        self.0
             .par_iter()
-            .filter(|word| pattern.matches(word.surface, strict).is_some())
+            .filter_map(|word| pattern.matches(word.surface, strict).map(|m| (word, m)))
             .map(map_op)
-            .collect();
-
-        matches.par_sort();
-
-        matches
+            .collect()
     }
 
+    #[cfg(not(feature = "rayon"))]
+    pub fn find_matches_map<F, O>(&'a self, pattern: Pattern, strict: bool, map_op: F) -> Vec<O>
+    where
+        F: Fn((&'a Word, PaddlerMatchResult)) -> O,
+    {
+        self.0
+            .iter()
+            .filter_map(|word| pattern.matches(word.surface, strict).map(|m| (word, m)))
+            .map(map_op)
+            .collect()
+
+        // matches
+    }
+
+    #[cfg(feature = "rayon")]
     pub fn find_matches(
         &'a self,
         pattern: Pattern,
         strict: bool,
     ) -> Vec<(&'a Word<'a>, PaddlerMatchResult)> {
-        let mut matches: Vec<(&'a Word<'a>, PaddlerMatchResult)> = self
-            .0
+        self.0
             .par_iter()
             .filter_map(|word| pattern.matches(word.surface, strict).map(|m| (word, m)))
-            .collect();
+            .collect()
+    }
 
-        matches.par_sort_by(|a, b| a.0.cmp(b.0));
-
-        matches
+    #[cfg(not(feature = "rayon"))]
+    pub fn find_matches(
+        &'a self,
+        pattern: Pattern,
+        strict: bool,
+    ) -> Vec<(&'a Word<'a>, PaddlerMatchResult)> {
+        self.0
+            .iter()
+            .filter_map(|word| pattern.matches(word.surface, strict).map(|m| (word, m)))
+            .collect()
     }
 }
