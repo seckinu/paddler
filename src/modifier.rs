@@ -45,82 +45,82 @@ pub enum Modifier {
 }
 
 impl Modifier {
-    pub fn from_str(s: &str) -> Option<Self> {
+    pub fn from_char(s: char) -> Option<Self> {
         match s {
-            "ʼ" => Some(Modifier::Ejective),
-            "̥" => Some(Modifier::Voiceless),
-            "ʰ" => Some(Modifier::Aspirated),
-            "̟" => Some(Modifier::Advanced),
-            "̠" => Some(Modifier::Retracted),
-            "̈" => Some(Modifier::Centralized),
-            "̩" => Some(Modifier::Syllabic),
-            "̯" => Some(Modifier::NonSyllabic),
-            "˞" => Some(Modifier::Rhotacized),
-            "̤" => Some(Modifier::BreathyVoiced),
-            "̰" => Some(Modifier::CreakyVoiced),
-            "ˀ" => Some(Modifier::Glottalized),
-            // "ˀ" => Ok(Modifier::Preglottalized),
-            "̼" => Some(Modifier::Linguolabial),
-            "ʷ" => Some(Modifier::Labialized),
-            "ʲ" => Some(Modifier::Palatalized),
-            "ᶣ" => Some(Modifier::Labiopalatalized),
-            "ˠ" => Some(Modifier::Velarized),
-            "ˤ" => Some(Modifier::Pharyngealized),
-            "̴" => Some(Modifier::VelarizedOrPharyngealized),
-            "̝" => Some(Modifier::Raised),
-            "̞" => Some(Modifier::Lowered),
-            "̘" => Some(Modifier::ATR),
-            "̙" => Some(Modifier::RTR),
-            "̺" => Some(Modifier::Apical),
-            "̻" => Some(Modifier::Laminal),
-            "̃" => Some(Modifier::Nasalized),
-            "ⁿ" => Some(Modifier::NasalRelease),
-            "ˡ" => Some(Modifier::LateralRelease),
+            'ʼ' => Some(Modifier::Ejective),
+            '̥' => Some(Modifier::Voiceless),
+            'ʰ' => Some(Modifier::Aspirated),
+            '̟' => Some(Modifier::Advanced),
+            '̠' => Some(Modifier::Retracted),
+            '̈' => Some(Modifier::Centralized),
+            '̩' => Some(Modifier::Syllabic),
+            '̯' => Some(Modifier::NonSyllabic),
+            '˞' => Some(Modifier::Rhotacized),
+            '̤' => Some(Modifier::BreathyVoiced),
+            '̰' => Some(Modifier::CreakyVoiced),
+            'ˀ' => Some(Modifier::Glottalized),
+            // 'ˀ' => Some(Modifier::Preglottalized),
+            '̼' => Some(Modifier::Linguolabial),
+            'ʷ' => Some(Modifier::Labialized),
+            'ʲ' => Some(Modifier::Palatalized),
+            'ᶣ' => Some(Modifier::Labiopalatalized),
+            'ˠ' => Some(Modifier::Velarized),
+            'ˤ' => Some(Modifier::Pharyngealized),
+            '̴' => Some(Modifier::VelarizedOrPharyngealized),
+            '̝' => Some(Modifier::Raised),
+            '̞' => Some(Modifier::Lowered),
+            '̘' => Some(Modifier::ATR),
+            '̙' => Some(Modifier::RTR),
+            '̺' => Some(Modifier::Apical),
+            '̻' => Some(Modifier::Laminal),
+            '̃' => Some(Modifier::Nasalized),
+            'ⁿ' => Some(Modifier::NasalRelease),
+            'ˡ' => Some(Modifier::LateralRelease),
 
             // allow colon for easier typing
-            "ː" => Some(Modifier::Long),
-            ":" => Some(Modifier::Long),
+            'ː' => Some(Modifier::Long),
+            ':' => Some(Modifier::Long),
 
-            "̆" => Some(Modifier::ExtraShort),
+            '̆' => Some(Modifier::ExtraShort),
             _ => None,
         }
     }
 }
 
 impl Modifier {
-    pub fn marker(&self) -> &'static str {
+    pub fn marker(&self) -> char {
         match self {
-            Modifier::Ejective => "ʼ",
-            Modifier::Voiceless => "̥",
-            Modifier::Aspirated => "ʰ",
-            Modifier::Advanced => "̟",
-            Modifier::Retracted => "̠",
-            Modifier::Centralized => "̈",
-            Modifier::Syllabic => "̩",
-            Modifier::NonSyllabic => "̯",
-            Modifier::Rhotacized => "˞",
-            Modifier::BreathyVoiced => "̤",
-            Modifier::CreakyVoiced => "̰",
-            Modifier::Glottalized => "ˀ",
-            Modifier::Preglottalized => "ˀ",
-            Modifier::Linguolabial => "̼",
-            Modifier::Labialized => "ʷ",
-            Modifier::Palatalized => "ʲ",
-            Modifier::Labiopalatalized => "ᶣ",
-            Modifier::Velarized => "ˠ",
-            Modifier::Pharyngealized => "ˤ",
-            Modifier::VelarizedOrPharyngealized => "̴",
-            Modifier::Raised => "̝",
-            Modifier::Lowered => "̞",
-            Modifier::ATR => "̘",
-            Modifier::RTR => "̙",
-            Modifier::Apical => "̺",
-            Modifier::Laminal => "̻",
-            Modifier::Nasalized => "̃",
-            Modifier::NasalRelease => "ⁿ",
-            Modifier::LateralRelease => "ˡ",
-            Modifier::Long => "ː",
-            Modifier::ExtraShort => "̆",
+            Modifier::Ejective => 'ʼ',
+            Modifier::Voiceless => '̥',
+            Modifier::Aspirated => 'ʰ',
+            Modifier::Advanced => '̟',
+            Modifier::Retracted => '̠',
+            Modifier::Centralized => '̈',
+            Modifier::Syllabic => '̩',
+            Modifier::NonSyllabic => '̯',
+            Modifier::Rhotacized => '˞',
+            Modifier::BreathyVoiced => '̤',
+            Modifier::CreakyVoiced => '̰',
+            Modifier::Glottalized => 'ˀ',
+            Modifier::Preglottalized => 'ˀ',
+            Modifier::Linguolabial => '̼',
+            Modifier::Labialized => 'ʷ',
+            Modifier::Palatalized => 'ʲ',
+            Modifier::Labiopalatalized => 'ᶣ',
+            Modifier::Velarized => 'ˠ',
+            Modifier::Pharyngealized => 'ˤ',
+            Modifier::VelarizedOrPharyngealized => '̴',
+            Modifier::Raised => '̝',
+            Modifier::Lowered => '̞',
+            Modifier::ATR => '̘',
+            Modifier::RTR => '̙',
+            Modifier::Apical => '̺',
+            Modifier::Laminal => '̻',
+            Modifier::Nasalized => '̃',
+            Modifier::NasalRelease => 'ⁿ',
+            Modifier::LateralRelease => 'ˡ',
+            Modifier::Long => 'ː',
+            Modifier::ExtraShort => '̆',
         }
     }
 
@@ -359,17 +359,14 @@ impl FromIterator<Modifier> for ModifierSet {
 }
 
 impl ModifierSet {
-    pub fn modifiers(&self) -> Vec<Modifier> {
-        self.iter()
-            .enumerate()
-            .filter_map(|(idx, bool)| {
-                if !bool {
-                    return None;
-                };
-
+    pub fn modifiers(&self) -> impl Iterator<Item = Modifier> {
+        self.iter().enumerate().filter_map(|(idx, &enabled)| {
+            if enabled {
                 Modifier::from_repr(idx)
-            })
-            .collect::<Vec<Modifier>>()
+            } else {
+                None
+            }
+        })
     }
 
     pub fn is_populated(&self) -> bool {
@@ -391,8 +388,8 @@ impl ModifierSet {
             let position = modifier.position();
             let modifier_str = modifier.marker();
             match position {
-                ModifierPosition::Pre => end_string.insert_str(0, modifier_str),
-                ModifierPosition::Post => end_string.push_str(modifier_str),
+                ModifierPosition::Pre => end_string.insert(0, modifier_str),
+                ModifierPosition::Post => end_string.push(modifier_str),
             }
         }
 

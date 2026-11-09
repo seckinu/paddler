@@ -101,14 +101,14 @@ impl Segment {
                 }
             }
             (Segment::FeatureSet(fs1), Segment::FeatureSet(fs2)) => {
-                if fs2 == fs1 {
+                if fs2.matches(fs1) {
                     SegmentMatchResult::Match
                 } else {
                     SegmentMatchResult::NoMatch
                 }
             }
             (Segment::FeatureSet(fs), Segment::IPA(ipa)) => {
-                if &ipa.features == fs {
+                if ipa.features.matches(fs) {
                     SegmentMatchResult::Match
                 } else {
                     SegmentMatchResult::NoMatch
@@ -296,7 +296,7 @@ impl Segment {
 
                             if possible_ipa_symbol.len() == 1 {
                                 // might also be a pre-modifier
-                                if let Some(modifier) = Modifier::from_str(&possible_ipa_symbol)
+                                if let Some(modifier) = Modifier::from_char(*c)
                                     && modifier.is_pre()
                                 {
                                     iter.next();
@@ -366,7 +366,7 @@ impl Segment {
 
                 // a modifier
                 // can only be a post-modifier, since we cannot get here without finding an ipa symbol
-                if let Some(modifier) = Modifier::from_str(&c.to_string()) {
+                if let Some(modifier) = Modifier::from_char(*c) {
                     modifiers.enable(modifier);
 
                     iter.next();

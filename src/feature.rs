@@ -69,7 +69,7 @@ impl Feature {
 
 impl Feature {
     pub fn from_str(s: &str) -> Option<Self> {
-        match s.to_lowercase() {
+        match s {
             s if s.starts_with("syl") => Some(Feature::Syllabic),
             s if s.starts_with("son") => Some(Feature::Sonorant),
             s if s.starts_with("cons") => Some(Feature::Consonantal),
@@ -149,7 +149,7 @@ impl From<&str> for FeatureState {
     }
 }
 
-#[derive(Debug, Eq, Copy, Clone, Default)]
+#[derive(Debug, PartialEq, Eq, Copy, Clone, Default)]
 pub struct FeatureSet(pub [FeatureState; 24]);
 
 impl Display for FeatureSet {
@@ -227,8 +227,8 @@ impl FeatureSet {
     }
 }
 
-impl PartialEq for FeatureSet {
-    fn eq(&self, other: &Self) -> bool {
+impl FeatureSet {
+    pub fn matches(&self, other: &Self) -> bool {
         self.0.iter().zip(other.0).all(|(self_state, other_state)| {
             match (other_state, self_state) {
                 (FeatureState::Neutral, _) => true,
@@ -282,9 +282,11 @@ impl FromStr for FeatureSet {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut feature_set = FeatureSet::default();
 
+        let normalized = s.to_ascii_lowercase();
+
         // "+feature -feature, feature"
         // if no sign is provided, assume positive
-        for part in s.split([',', ' ']) {
+        for part in normalized.split([',', ' ']) {
             let part = part.trim();
             if part.is_empty() {
                 continue;
